@@ -3,12 +3,14 @@ from apkpure.apkpure import ApkPure
 
 api = ApkPure()
 
-# top_result = api.search_top("WfadhatsApp")
+# top_result = api.search_top("WhaftsApp")
 # print(top_result)
 #
 # # Search for all results
-#
-all_results = api.search_all("WhatsApp")
+
+all_results = api.search_all("
+            download_link =  result.find("a")
+")
 print(all_results)
 #
 # # Get app versions
@@ -20,7 +22,7 @@ print(all_results)
 # print(app_info)
 #
 # Download the latest version of an app
-print(api.download("facebook lite"))
+# print(api.download("facebook lite"))
 # print(os.path.getsize("./WhatsApp Messenger_2.24.13.9_APKPure.apk"))
 # Download a specific version of an app
 # api.download("WhatsApp", version="3.21.1.15")

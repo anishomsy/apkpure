@@ -20,11 +20,15 @@ class ApkPure:
         soup = BeautifulSoup(resp.text, "html.parser")
         return soup
 
-    def search_top(self, name: str) -> str:
+    def search_top(self, name: str) -> str | Exception:
         url = f"https://apkpure.com/search?q={name}"
         soup = self.__helper(url)
-        result = soup.find("div", class_="first")
-        package_url = result.find("a", class_="first-info brand-info").attrs["href"]
+        try:
+            result = soup.find("div", class_="first")
+            package_url = result.find("a", class_="first-info").attrs["href"]
+        except Exception:
+            return Exception("Invalid app name!")
+
         title = result.find("p", class_="p1").text.strip()
         developer = result.find("p", class_="p2").text.strip()
         icon = result.find("img").attrs["src"]
@@ -33,7 +37,11 @@ class ApkPure:
         package_size = dl_btn["data-dt-filesize"]
         package_version = dl_btn["data-dt-version"]
         package_versioncode = dl_btn["data-dt-versioncode"]
-        download_link = result.find("a", class_="is-download").attrs["href"]
+
+        try:
+            download_link = result.find("a", class_="is-download").attrs["href"]
+        except:
+            download_link = result.find("a", class_="da").attrs["href"]
 
         new = {
             "title": title,
@@ -53,11 +61,24 @@ class ApkPure:
 
         url = f"https://apkpure.com/search?q={name}"
 
-        first = self.search_top(name)
-        full.append(json.loads(first))
+        try:
+            first = self.search_top(name)
+            full.append(json.loads(first))
+        except Exception:
+            full = []
         soup = self.__helper(url)
-        results = soup.find("div", class_="list sa-apps-div app-list")
-        ul = results.find_all("li")
+        try:
+            first = soup.find("div", class_="")
+        except Exception as e:
+            raise
+        try:
+            results = soup.find("div", class_="list sa-apps-div app-list")
+            ul = results.find_all("li")
+        except:
+            results = soup.find(
+                "div", class_="list sa-apps-div show-top-stroke app-list"
+            )
+            ul = results.find_all("li")
         for li in ul:
             package_url = li.find("a", class_="dd", href=True).attrs["href"]
             title = li.find("p", class_="p1").text.strip()
