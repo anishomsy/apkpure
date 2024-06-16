@@ -1,5 +1,3 @@
-import os
-
 from apkpure.apkpure import ApkPure
 
 

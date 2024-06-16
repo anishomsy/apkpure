@@ -73,7 +73,7 @@ cd apkpure
 Here's a quick example of how to use the `ApkPure` class:
 
 ```python
-from apkpure import ApkPure
+from apkpure.apkpure import ApkPure
 
 # Initialize the API
 api = ApkPure()

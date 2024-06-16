@@ -1,5 +1,6 @@
 [tool.poetry]
 name = "apkpure"
+package-mode = true
 version = "0.1.0"
 description = "An API for interacting with the APK Pure website, allowing you to search for apps, retrieve app information, and download apps programmatically."
 authors = ["Anis Homsy <anisfhomsi@gmail.com>"]
