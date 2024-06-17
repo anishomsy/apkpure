@@ -5,6 +5,8 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 import re
 
+import cloudscraper
+
 
 class ApkPure:
     def __init__(
@@ -16,9 +18,19 @@ class ApkPure:
         self.headers = headers
 
     def __helper(self, url):
-        resp = requests.get(url, headers=self.headers)
-        soup = BeautifulSoup(resp.text, "html.parser")
+        response = self.get_response(url=url)
+        soup = BeautifulSoup(response.text, "html.parser")
         return soup
+    
+    def get_response(self, url : str):
+        response = requests.get(url, self.headers)
+        
+        if response.status_code == 403:
+            scraper = cloudscraper.create_scraper()
+            response = scraper.get(url=url)
+            
+        return response
+            
 
     def search_top(self, name: str) -> str | Exception:
         url = f"https://apkpure.com/search?q={name}"
@@ -187,6 +199,7 @@ class ApkPure:
 
     def downloader(self, url: str) -> str:
         r = requests.get(url, stream=True, allow_redirects=True, headers=self.headers)
+        
 
         d = r.headers["content-disposition"]
         fname = re.findall("filename=(.+)", d)[0].strip('"')

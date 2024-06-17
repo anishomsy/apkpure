@@ -3,15 +3,18 @@ from apkpure.apkpure import ApkPure
 
 api = ApkPure()
 
+
+allResults = api.search_all('Free fire')
+print(allResults)
 # top_result = api.search_top("WhaftsApp")
 # print(top_result)
 #
 # # Search for all results
 
-all_results = api.search_all("
-            download_link =  result.find("a")
-")
-print(all_results)
+#all_results = api.search_all("
+#            download_link =  result.find("a")
+#")
+#print(all_results)
 #
 # # Get app versions
 # versions = api.get_versions("WhatsApp")
