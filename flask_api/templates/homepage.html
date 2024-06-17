@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="search_container">
+    <form action="{{url_for('search')}}" method="post">
+        <input type="text" name="q" id="q" placeholder="Search for app">
+        <button>Search</button>
+    </form>
+</div>
+{% if search_results %}
+    {% for package in search_results %}
+     <div>
+        <h1>
+            Title : {{package.title}}
+        </h1>
+        <img src="{{package.icon}}" alt="">
+        <p>
+            Developer : {{package.developer}}
+        </p>
+        <!-- TODO -->
+        <a href="{{package.download_link}}">Download</a>
+     </div>
+    {% endfor %}
+ 
+{% endif %}
+{% endblock content %}
