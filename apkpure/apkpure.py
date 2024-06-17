@@ -29,7 +29,7 @@ class ApkPure:
             scraper = cloudscraper.create_scraper()
             response = scraper.get(url=url, **kwargs)
             
-        return response or None
+        return response if response.status_code == 403 else None
             
 
     def search_top(self, name: str) -> str | Exception:
