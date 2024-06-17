@@ -4,7 +4,7 @@ from apkpure.apkpure import ApkPure
 api = ApkPure()
 
 
-allResults = api.search_all('Free fire')
+allResults = api.download('free fire')
 print(allResults)
 # top_result = api.search_top("WhaftsApp")
 # print(top_result)
