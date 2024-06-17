@@ -21,16 +21,16 @@ class ApkPure:
         response = self.get_response(url=url)
         soup = BeautifulSoup(response.text, "html.parser")
         return soup
-    
-    def get_response(self, url : str, **kwargs):
+
+    def get_response(self, url: str, **kwargs):
         response = requests.get(url, self.headers)
-        
+
         if response.status_code == 403:
             scraper = cloudscraper.create_scraper()
             response = scraper.get(url=url, **kwargs)
-            
-        return response if response.status_code == 403 else None
-            
+
+        # Return the response if the response is successful i.e status_code == 200
+        return response if response.status_code == 200 else None
 
     def search_top(self, name: str) -> str | Exception:
         url = f"https://apkpure.com/search?q={name}"
@@ -177,9 +177,9 @@ class ApkPure:
         return json.dumps(new)
 
     def download(self, name: str, version: str = "") -> str | None:
-        base_url = 'https://d.apkpure.com/b/APK/'
-        base_url_XAPK = 'https://d.apkpure.com/b/XAPK/'
-        
+        base_url = "https://d.apkpure.com/b/APK/"
+        base_url_XAPK = "https://d.apkpure.com/b/XAPK/"
+
         versions = json.loads(self.get_versions(name))
         url = ""
         if not version:
@@ -206,9 +206,11 @@ class ApkPure:
 
     # TODO Fix this downloader method
     def downloader(self, url: str) -> str:
-        response = requests.get(url, stream=True, allow_redirects=True, headers=self.headers)
+        response = requests.get(
+            url, stream=True, allow_redirects=True, headers=self.headers
+        )
 
-        d = response.headers.get('content-disposition')
+        d = response.headers.get("content-disposition")
         fname = re.findall("filename=(.+)", d)[0].strip('"')
 
         fname = os.path.join(os.getcwd(), f"apks/{fname}")
