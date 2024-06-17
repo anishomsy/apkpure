@@ -5,6 +5,8 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 import re
 
+import cloudscraper
+
 
 class ApkPure:
     def __init__(
@@ -16,9 +18,19 @@ class ApkPure:
         self.headers = headers
 
     def __helper(self, url):
-        resp = requests.get(url, headers=self.headers)
-        soup = BeautifulSoup(resp.text, "html.parser")
+        response = self.get_response(url=url)
+        soup = BeautifulSoup(response.text, "html.parser")
         return soup
+    
+    def get_response(self, url : str, **kwargs):
+        response = requests.get(url, self.headers)
+        
+        if response.status_code == 403:
+            scraper = cloudscraper.create_scraper()
+            response = scraper.get(url=url, **kwargs)
+            
+        return response if response.status_code == 403 else None
+            
 
     def search_top(self, name: str) -> str | Exception:
         url = f"https://apkpure.com/search?q={name}"
@@ -36,25 +48,25 @@ class ApkPure:
         package_name = dl_btn["data-dt-app"]
         package_size = dl_btn["data-dt-filesize"]
         package_version = dl_btn["data-dt-version"]
-        package_versioncode = dl_btn["data-dt-versioncode"]
+        package_version_code = dl_btn["data-dt-versioncode"]
 
         try:
             download_link = result.find("a", class_="is-download").attrs["href"]
         except:
             download_link = result.find("a", class_="da").attrs["href"]
 
-        new = {
+        package = {
             "title": title,
             "developer": developer,
             "package_name": package_name,
             "package_url": package_url,
             "icon": icon,
             "version": package_version,
-            "version_code": package_versioncode,
+            "version_code": package_version_code,
             "size": package_size,
             "download_link": download_link,
         }
-        return json.dumps(new)
+        return json.dumps(package)
 
     def search_all(self, name: str) -> str:
         full = []
@@ -165,13 +177,20 @@ class ApkPure:
         return json.dumps(new)
 
     def download(self, name: str, version: str = "") -> str | None:
+        base_url = 'https://d.apkpure.com/b/APK/'
+        base_url_XAPK = 'https://d.apkpure.com/b/XAPK/'
+        
         versions = json.loads(self.get_versions(name))
         url = ""
-        if version == "":
-            url = f"https://d.apkpure.com/b/APK/{versions[0]["app"]}?versionCode={versions[1]["version_code"]}"
+        if not version:
+            url = f"{base_url}{versions[0]["app"]}?versionCode={versions[1]["version_code"]}"
             print(url)
             print("Downloading Latest")
-            return self.downloader(url)
+            try:
+                callback = self.downloader(url)
+            except KeyError:
+                url = f"{base_url_XAPK}{versions[0]["app"]}?versionCode={versions[1]["version_code"]}"
+                return self.downloader(url)
 
         for v in versions[1:]:
             if version == v["version"]:
@@ -179,16 +198,17 @@ class ApkPure:
                 break
 
         # Check url
-        if url == "":
+        if not url:
             print(f"Invalid Version: {version}")
             return None
         print(f"Downloading v{version}")
         return self.downloader(url)
 
+    # TODO Fix this downloader method
     def downloader(self, url: str) -> str:
-        r = requests.get(url, stream=True, allow_redirects=True, headers=self.headers)
+        response = requests.get(url, stream=True, allow_redirects=True, headers=self.headers)
 
-        d = r.headers["content-disposition"]
+        d = response.headers.get('content-disposition')
         fname = re.findall("filename=(.+)", d)[0].strip('"')
 
         fname = os.path.join(os.getcwd(), f"apks/{fname}")
@@ -196,7 +216,7 @@ class ApkPure:
         os.makedirs(os.path.dirname(fname), exist_ok=True)
 
         if os.path.exists(fname):
-            if int(r.headers.get("content-length", 0)) == os.path.getsize(fname):
+            if int(response.headers.get("content-length", 0)) == os.path.getsize(fname):
                 print("File Exists!")
                 return os.path.realpath(fname)
 
@@ -204,9 +224,9 @@ class ApkPure:
             open(fname, "wb"),
             "write",
             miniters=1,
-            total=int(r.headers.get("content-length", 0)),
+            total=int(response.headers.get("content-length", 0)),
         ) as file:
-            for chunk in r.iter_content(chunk_size=4 * 1024):
+            for chunk in response.iter_content(chunk_size=4 * 1024):
                 if chunk:
                     file.write(chunk)
 
