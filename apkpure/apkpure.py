@@ -206,9 +206,7 @@ class ApkPure:
 
     # TODO Fix this downloader method
     def downloader(self, url: str) -> str:
-        response = requests.get(
-            url, stream=True, allow_redirects=True, headers=self.headers
-        )
+        response = self.get_response(url = url , stream=True, allow_redirects=True, headers=self.headers)
 
         d = response.headers.get("content-disposition")
         fname = re.findall("filename=(.+)", d)[0].strip('"')
