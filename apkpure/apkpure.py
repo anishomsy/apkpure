@@ -28,7 +28,6 @@ class ApkPure:
             response = scraper.get(url=url, **kwargs)
 
         # Return the response if the response is successful i.e status_code == 200
-        # TODO fix the error handle inside the function or create another one to show a message that the server is blocked
         return response if response.status_code == 200 else None
 
     def search_top(self, name: str) -> str | Exception:
@@ -210,8 +209,6 @@ class ApkPure:
 
     def download(self, name: str, version: str = "") -> str | None:
         base_url = "https://d.apkpure.com/b/APK/"
-        
-        # Some apps only exist as xapk file, and if we try to get the base url as APK the script will get error
         base_url_XAPK = "https://d.apkpure.com/b/XAPK/"
 
         versions = json.loads(self.get_versions(name))
