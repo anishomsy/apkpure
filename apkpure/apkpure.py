@@ -9,20 +9,18 @@ import cloudscraper
 
 
 class ApkPure:
-    def __init__(
-        self,
-        headers: dict | None = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0"
-        },
-    ) -> None:
+    def __init__(self, headers: dict | None = None) -> None:
+        if headers is None:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0"
+            }
         self.headers = headers
 
-    def __helper(self, url):
+    def __helper(self, url) -> BeautifulSoup:
         response = self.get_response(url=url)
-        soup = BeautifulSoup(response.text, "html.parser")
-        return soup
+        return BeautifulSoup(response.text, "html.parser")
 
-    def get_response(self, url: str, **kwargs):
+    def get_response(self, url: str, **kwargs) -> requests.Response | None:
         response = requests.get(url, self.headers)
 
         if response.status_code == 403:
@@ -33,40 +31,73 @@ class ApkPure:
         return response if response.status_code == 200 else None
 
     def search_top(self, name: str) -> str | Exception:
-        url = f"https://apkpure.com/search?q={name}"
-        soup = self.__helper(url)
-        try:
-            result = soup.find("div", class_="first")
-            package_url = result.find("a", class_="first-info").attrs["href"]
-        except Exception:
-            return Exception("Invalid app name!")
+        query_url = f"https://apkpure.com/search?q={name}"
+        soup_obj = self.__helper(query_url)
 
-        title = result.find("p", class_="p1").text.strip()
-        developer = result.find("p", class_="p2").text.strip()
-        icon = result.find("img").attrs["src"]
-        dl_btn = result.attrs
-        package_name = dl_btn["data-dt-app"]
-        package_size = dl_btn["data-dt-filesize"]
-        package_version = dl_btn["data-dt-version"]
-        package_version_code = dl_btn["data-dt-versioncode"]
+        # Find the first div aka as first result 
+        first_div : BeautifulSoup = soup_obj.find("div", class_="first")
+        
+        # Find the url for the package
+        package_url = first_div.find("a", class_="first-info")
+        
+        if first_div is None or package_url is None:
+            return Exception("App not found")
+        else:
+            package_url = package_url.attrs["href"]
 
-        try:
-            download_link = result.find("a", class_="is-download").attrs["href"]
-        except:
-            download_link = result.find("a", class_="da").attrs["href"]
+        def get_basic_info() -> dict:
+            title = first_div.find("p", class_="p1")
+            developer = first_div.find("p", class_="p2")
 
-        package = {
-            "title": title,
-            "developer": developer,
-            "package_name": package_name,
-            "package_url": package_url,
-            "icon": icon,
-            "version": package_version,
-            "version_code": package_version_code,
-            "size": package_size,
-            "download_link": download_link,
-        }
-        return json.dumps(package)
+            return {
+                'title' : title.text.strip() if title else 'Uknown',
+                'developer' : developer.text.strip() if developer else 'Uknown',
+            }
+        
+        def get_icon() -> dict:
+            icon = first_div.find("img")
+
+            return {
+                'icon' : icon.attrs.get('src', 'Uknown') if icon else 'Uknown'
+                }
+            
+        def get_package_data() -> dict:
+            package_data = first_div.attrs
+
+            package_name = package_data.get("data-dt-app", 'Uknown')
+            package_size = package_data.get("data-dt-filesize", 'Uknown')
+            package_version = package_data.get("data-dt-version", 'Uknown')
+            package_version_code = package_data.get("data-dt-versioncode", 'Uknown')
+
+            return {
+                "package_name" : package_name,
+                "package_size" : package_size,
+                "package_version" : package_version,
+                "package_version_code" : package_version_code
+            }
+
+        def get_download_link() -> dict:
+            if download_link := first_div.find("a", class_="is-download"):
+                return {
+                    'download_link' : download_link.attrs.get('href', 'Uknown')
+                }
+
+            download_link = first_div.find("a", class_="da")
+
+            return {
+                'download_link' : download_link.attrs.get('href', 'Uknown')
+            }
+
+        basic_info : dict = get_basic_info()
+        icon : dict = get_icon()
+        package_data : dict = get_package_data()
+        download_link : dict = get_download_link()
+
+        # Spread all the info into the all_info and then dump it to json
+        all_app_info = basic_info | icon | package_data | download_link
+
+        return json.dumps(all_app_info)
+
 
     def search_all(self, name: str) -> str:
         full = []
@@ -215,10 +246,9 @@ class ApkPure:
 
         os.makedirs(os.path.dirname(fname), exist_ok=True)
 
-        if os.path.exists(fname):
-            if int(response.headers.get("content-length", 0)) == os.path.getsize(fname):
-                print("File Exists!")
-                return os.path.realpath(fname)
+        if os.path.exists(fname) and int(response.headers.get("content-length", 0)) == os.path.getsize(fname):
+            print("File Exists!")
+            return os.path.realpath(fname)
 
         with tqdm.wrapattr(
             open(fname, "wb"),
