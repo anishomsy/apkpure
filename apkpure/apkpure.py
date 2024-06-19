@@ -41,7 +41,7 @@ class ApkPure:
         package_url = first_div.find("a", class_="first-info")
         
         if first_div is None or package_url is None:
-            return Exception("App not found")
+            raise Exception("App not found")
         else:
             package_url = package_url.attrs["href"]
 
