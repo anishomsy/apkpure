@@ -15,6 +15,8 @@ class ApkPure:
                 "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0"
             }
         self.headers = headers
+        self.query_url = "https://apkpure.com/search?q="
+
 
     def __helper(self, url) -> BeautifulSoup:
         response = self.get_response(url=url)
@@ -29,41 +31,43 @@ class ApkPure:
 
         # Return the response if the response is successful i.e status_code == 200
         return response if response.status_code == 200 else None
-
-    def search_top(self, name: str) -> str | Exception:
-        query_url = f"https://apkpure.com/search?q={name}"
-        soup_obj = self.__helper(query_url)
-
-        # Find the first div aka as first result 
-        first_div : BeautifulSoup = soup_obj.find("div", class_="first")
-        
-        # Find the url for the package
-        package_url = first_div.find("a", class_="first-info")
-        
-        if first_div is None or package_url is None:
-            raise Exception("App not found")
-        else:
-            package_url = package_url.attrs["href"]
-
+    
+    def extract_info(self, div_element):
         def get_basic_info() -> dict:
-            title = first_div.find("p", class_="p1")
-            developer = first_div.find("p", class_="p2")
-
+            title = div_element.find("p", class_="p1")
+            developer = div_element.find("p", class_="p2")
             return {
                 'title' : title.text.strip() if title else 'Uknown',
                 'developer' : developer.text.strip() if developer else 'Uknown',
             }
-        
+            
+        def get_package_url(div_element) -> dict:
+            package_url = div_element.find("a", class_="first-info")
+            
+            if package_url is None:
+                package_url = div_element.find("a", class_="dd")
+            
+            return {
+                "package_url" : package_url.attrs.get('href', 'Uknown')
+            }
+            
         def get_icon() -> dict:
-            icon = first_div.find("img")
+            icon = div_element.find("img")
 
             return {
                 'icon' : icon.attrs.get('src', 'Uknown') if icon else 'Uknown'
                 }
             
         def get_package_data() -> dict:
-            package_data = first_div.attrs
-
+            # This method work if is the first element
+            package_data = div_element.attrs
+            print(bool(package_data), package_data)
+            
+            if not package_data:
+                print('verdade')
+                # If the div in the div_element is not the correct, so its a li element
+                package_data = div_element.find("a", class_="is-download")
+            
             package_name = package_data.get("data-dt-app", 'Uknown')
             package_size = package_data.get("data-dt-filesize", 'Uknown')
             package_version = package_data.get("data-dt-version", 'Uknown')
@@ -75,78 +79,65 @@ class ApkPure:
                 "package_version" : package_version,
                 "package_version_code" : package_version_code
             }
-
+            
         def get_download_link() -> dict:
-            if download_link := first_div.find("a", class_="is-download"):
+            if download_link := div_element.find("a", class_="is-download"):
                 return {
                     'download_link' : download_link.attrs.get('href', 'Uknown')
                 }
 
-            download_link = first_div.find("a", class_="da")
+            download_link = div_element.find("a", class_="da")
 
             return {
                 'download_link' : download_link.attrs.get('href', 'Uknown')
             }
-
+            
         basic_info : dict = get_basic_info()
+        package_url : dict = get_package_url(div_element)
         icon : dict = get_icon()
         package_data : dict = get_package_data()
         download_link : dict = get_download_link()
 
         # Spread all the info into the all_info and then dump it to json
-        all_app_info = basic_info | icon | package_data | download_link
+        all_app_info = basic_info | icon | package_data | download_link | package_url
+        
+        return all_app_info
 
-        return json.dumps(all_app_info)
+
+    def search_top(self, name: str) -> str | Exception:
+        query_url = self.query_url + name
+        soup_obj = self.__helper(query_url)
+        
+        # The div element
+        first_div : BeautifulSoup = soup_obj.find("div", class_="first")
+        # package_url for first result
+        package_url = first_div.find("a", class_="first-info")
+
+        if first_div is None:
+            raise Exception("App not found")
+        
+        
+        if package_url is None:
+            package_url = first_div.find("a", class_="dd")
+
+        result = self.extract_info(first_div)
+
+        return json.dumps(result)
 
 
-    def search_all(self, name: str) -> str:
-        full = []
-
-        url = f"https://apkpure.com/search?q={name}"
-
-        try:
-            first = self.search_top(name)
-            full.append(json.loads(first))
-        except Exception:
-            full = []
+    def search_all(self, name: str) -> BeautifulSoup:
+        url = self.query_url + name
         soup = self.__helper(url)
-        try:
-            first = soup.find("div", class_="")
-        except Exception as e:
-            raise
-        try:
-            results = soup.find("div", class_="list sa-apps-div app-list")
-            ul = results.find_all("li")
-        except:
-            results = soup.find(
-                "div", class_="list sa-apps-div show-top-stroke app-list"
-            )
-            ul = results.find_all("li")
-        for li in ul:
-            package_url = li.find("a", class_="dd", href=True).attrs["href"]
-            title = li.find("p", class_="p1").text.strip()
-            developer = li.find("p", class_="p2").text.strip()
-            icon = li.find("img").attrs["src"]
-            dl_btn = li.find("a", class_="is-download").attrs
-            package_name = dl_btn["data-dt-app"]
-            package_size = dl_btn["data-dt-filesize"]
-            package_version = dl_btn["data-dt-version"]
-            package_versioncode = dl_btn["data-dt-versioncode"]
-            download_link = dl_btn["href"]
+        
+        first_app = soup.find("div", class_="first")
+        list_of_apps = soup.find("ul", class_="search-res")
+        
+        apps_in_result = list_of_apps.find_all("li")
+        
+        return self.extract_info(apps_in_result[0])
+        
 
-            new = {
-                "title": title,
-                "developer": developer,
-                "package_name": package_name,
-                "package_url": package_url,
-                "icon": icon,
-                "version": package_version,
-                "version_code": package_versioncode,
-                "size": package_size,
-                "download_link": download_link,
-            }
-            full.append(new)
-        return json.dumps(full)
+        return self.__helper(url)
 
     def get_versions(self, name) -> str:
         s = json.loads(self.search_top(name))
