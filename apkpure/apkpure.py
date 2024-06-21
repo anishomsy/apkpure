@@ -101,6 +101,11 @@ class ApkPure:
 
 
     def search_top(self, name: str) -> str | Exception:
+        name = name.strip()
+        
+        if not name:
+            raise Exception('No search query provided')
+
         query_url = self.query_url + name
         soup_obj = self.__helper(query_url)
         
