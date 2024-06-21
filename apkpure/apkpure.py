@@ -32,7 +32,7 @@ class ApkPure:
         # Return the response if the response is successful i.e status_code == 200
         return response if response.status_code == 200 else None
     
-    def extract_info(self, html_element):
+    def extract_info_from_search(self, html_element):
         def get_basic_info() -> dict:
             title = html_element.find("p", class_="p1")
             developer = html_element.find("p", class_="p2")
@@ -99,12 +99,13 @@ class ApkPure:
         
         return all_app_info
 
-
-    def search_top(self, name: str) -> str | Exception:
+    def check_name(self, name):
         name = name.strip()
-        
         if not name:
             raise Exception('No search query provided')
+
+    def search_top(self, name: str) -> str | Exception:
+        self.check_name(name)
 
         query_url = self.query_url + name
         soup_obj = self.__helper(query_url)
@@ -116,17 +117,18 @@ class ApkPure:
 
         if first_div is None:
             raise Exception("App not found")
-        
-        
+
         if package_url is None:
             package_url = first_div.find("a", class_="dd")
 
-        result = self.extract_info(first_div)
+        result = self.extract_info_from_search(first_div)
 
         return json.dumps(result)
 
 
     def search_all(self, name: str) -> list[dict]:
+        self.check_name(name)
+        
         url = self.query_url + name
         soup = self.__helper(url)
         
@@ -140,7 +142,7 @@ class ApkPure:
         ]
         
         for app in apps_in_list_of_apps:
-            all_results.append(self.extract_info(app))
+            all_results.append(self.extract_info_from_search(app))
         return all_results
 
     def get_versions(self, name) -> str:
@@ -168,10 +170,10 @@ class ApkPure:
         return json.dumps(full)
 
     def get_info(self, name: str) -> str:
-        url = json.loads(self.search_top(name))["package_url"]
-        soup = self.__helper(url)
-
-        divs = soup.find("div", class_="detail_banner")
+        url = self.search_top(name).get('package_url')
+        html_obj = self.__helper(url)
+        
+        divs = html_obj.find("div", class_="detail_banner")
         title = divs.find("div", class_="title_link").get_text(strip=True)
         rating = divs.find("span", class_="rating").get_text(strip=True)
         date = divs.find("p", class_="date").text.strip()
