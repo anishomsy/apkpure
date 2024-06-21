@@ -56,16 +56,12 @@ class ApkPure:
 
             return {
                 'icon' : icon.attrs.get('src', 'Uknown') if icon else 'Uknown'
-                }
+            }
             
         def get_package_data() -> dict:
-            # This method work if is the first element
             package_data = div_element.attrs
-            print(bool(package_data), package_data)
             
-            if not package_data:
-                print('verdade')
-                # If the div in the div_element is not the correct, so its a li element
+            if not package_data.get('class', ''):
                 package_data = div_element.find("a", class_="is-download")
             
             package_name = package_data.get("data-dt-app", 'Uknown')
@@ -125,19 +121,22 @@ class ApkPure:
         return json.dumps(result)
 
 
-    def search_all(self, name: str) -> BeautifulSoup:
+    def search_all(self, name: str) -> list[dict]:
         url = self.query_url + name
         soup = self.__helper(url)
         
         first_app = soup.find("div", class_="first")
-        list_of_apps = soup.find("ul", class_="search-res")
         
-        apps_in_result = list_of_apps.find_all("li")
+        list_of_apps = soup.find("ul", class_="search-res") # UL
+        apps_in_list_of_apps = list_of_apps.find_all("li") # LI's
         
-        return self.extract_info(apps_in_result[0])
+        all_results = [
+            self.extract_info(first_app)
+        ]
         
-
-        return self.__helper(url)
+        for app in apps_in_list_of_apps:
+            all_results.append(self.extract_info(app))
+        return all_results
 
     def get_versions(self, name) -> str:
         s = json.loads(self.search_top(name))
