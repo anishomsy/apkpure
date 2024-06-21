@@ -32,37 +32,37 @@ class ApkPure:
         # Return the response if the response is successful i.e status_code == 200
         return response if response.status_code == 200 else None
     
-    def extract_info(self, div_element):
+    def extract_info(self, html_element):
         def get_basic_info() -> dict:
-            title = div_element.find("p", class_="p1")
-            developer = div_element.find("p", class_="p2")
+            title = html_element.find("p", class_="p1")
+            developer = html_element.find("p", class_="p2")
             return {
                 'title' : title.text.strip() if title else 'Uknown',
                 'developer' : developer.text.strip() if developer else 'Uknown',
             }
             
-        def get_package_url(div_element) -> dict:
-            package_url = div_element.find("a", class_="first-info")
+        def get_package_url(html_element) -> dict:
+            package_url = html_element.find("a", class_="first-info")
             
             if package_url is None:
-                package_url = div_element.find("a", class_="dd")
+                package_url = html_element.find("a", class_="dd")
             
             return {
                 "package_url" : package_url.attrs.get('href', 'Uknown')
             }
             
         def get_icon() -> dict:
-            icon = div_element.find("img")
+            icon = html_element.find("img")
 
             return {
                 'icon' : icon.attrs.get('src', 'Uknown') if icon else 'Uknown'
             }
             
         def get_package_data() -> dict:
-            package_data = div_element.attrs
+            package_data = html_element.attrs
             
             if not package_data.get('class', ''):
-                package_data = div_element.find("a", class_="is-download")
+                package_data = html_element.find("a", class_="is-download")
             
             package_name = package_data.get("data-dt-app", 'Uknown')
             package_size = package_data.get("data-dt-filesize", 'Uknown')
@@ -77,19 +77,19 @@ class ApkPure:
             }
             
         def get_download_link() -> dict:
-            if download_link := div_element.find("a", class_="is-download"):
+            if download_link := html_element.find("a", class_="is-download"):
                 return {
                     'download_link' : download_link.attrs.get('href', 'Uknown')
                 }
 
-            download_link = div_element.find("a", class_="da")
+            download_link = html_element.find("a", class_="da")
 
             return {
                 'download_link' : download_link.attrs.get('href', 'Uknown')
             }
             
         basic_info : dict = get_basic_info()
-        package_url : dict = get_package_url(div_element)
+        package_url : dict = get_package_url(html_element)
         icon : dict = get_icon()
         package_data : dict = get_package_data()
         download_link : dict = get_download_link()
