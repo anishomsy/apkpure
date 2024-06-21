@@ -63,13 +63,14 @@ class ApkPure:
             
             if not package_data.get('class', ''):
                 package_data = html_element.find("a", class_="is-download")
-            
+            package_extension = package_data.get("data-dt-apk-type", 'Uknown')
             package_name = package_data.get("data-dt-app", 'Uknown')
             package_size = package_data.get("data-dt-filesize", 'Uknown')
             package_version = package_data.get("data-dt-version", 'Uknown')
             package_version_code = package_data.get("data-dt-versioncode", 'Uknown')
 
             return {
+                "package_extension" : package_extension,
                 "package_name" : package_name,
                 "package_size" : package_size,
                 "package_version" : package_version,
