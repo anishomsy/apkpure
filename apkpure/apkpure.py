@@ -6,6 +6,7 @@ from tqdm import tqdm
 import re
 import sys
 import cloudscraper
+import wget
 
 
 # Utils
@@ -79,7 +80,7 @@ class ApkPure:
         list_of_apps = soup.find("ul", id="search-res")  # UL
         apps_in_list_of_apps = list_of_apps.find_all("li")  # LI's
 
-        all_results = [self.extract_info_from_search(first_app)]
+        all_results = [extractors.extract_info_from_search(first_app)]
 
         for app in apps_in_list_of_apps:
             all_results.append(extractors.extract_info_from_search(app))
@@ -109,7 +110,7 @@ class ApkPure:
             
         return json.dumps(all_versions, indent=4)
 
-    def get_info(self, name: str) -> str:
+    def get_info(self, name: str) -> dict:
         
         first_app_from_search : dict = json.loads(self.search_top(name))
         # This variable already give us the needed information about the package
@@ -135,62 +136,34 @@ class ApkPure:
             'rating': detail_banner_rating_stars,
             'description': description,
             'reviews': detail_banner_reviews,
-            'last update': detail_banner_last_update,
-            'latest version': detail_banner_version,
+            'last_update': detail_banner_last_update,
+            'latest_version': detail_banner_version,
             'developer': detail_banner_developer,
             } | first_app_from_search
         
         return json.dumps( all_info, indent=4)
     
-    def download(self, name: str, version: str = "") -> str | None:
-        base_url = "https://d.apkpure.com/b/APK/"
-
-        versions = json.loads(self.get_versions(name))
-        url = ""
+    def download(self, name: str, version: str = None) -> str | None:
         if not version:
-            url = f"{base_url}{versions[0]["app"]}?versionCode={versions[1]["version_code"]}"
-            print(url)
-            print("Downloading Latest")
+            package_info : dict = json.loads(self.get_info(name))
+            base_url = 'https://d.apkpure.com/b/XAPK/' \
+                + package_info.get('package_name') \
+                + '?versionCode=' \
+                + package_info.get('package_version_code')
+            
+            return self.__downloader(base_url)
 
-        for v in versions[1:]:
-            if version == v["version"]:
-                url = f"https://d.apkpure.com/b/APK/{versions[0]["app"]}?versionCode={v["version_code"]}"
-                break
-
-        # Check url
-        if not url:
-            print(f"Invalid Version: {version}")
-            return None
-        print(f"Downloading v{version}")
-        return self.downloader(url)
-
-    # TODO Fix this downloader method
-    def downloader(self, url: str) -> str:
-        response = self.__get_response(
-            url=url, stream=True, allow_redirects=True, headers=self.headers
-        )
-
-        d = response.headers.get("content-disposition")
-        fname = re.findall("filename=(.+)", d)[0].strip('"')
-
-        fname = os.path.join(os.getcwd(), f"apks/{fname}")
-
-        os.makedirs(os.path.dirname(fname), exist_ok=True)
-
-        if os.path.exists(fname) and int(
-            response.headers.get("content-length", 0)
-        ) == os.path.getsize(fname):
-            print("File Exists!")
-            return os.path.realpath(fname)
-
-        with tqdm.wrapattr(
-            open(fname, "wb"),
-            "write",
-            miniters=1,
-            total=int(response.headers.get("content-length", 0)),
-        ) as file:
-            for chunk in response.iter_content(chunk_size=4 * 1024):
+    def __downloader(self, url: str) -> str:
+        response = self.__get_response(url=url, stream=True)
+        file_size = int(response.headers.get('Content-Length', 0))
+        
+        name = response.headers.get('Content-Disposition').split('filename=')[1].replace('"', '')
+        with open(f'{name}', 'wb') as package_file:
+            progress_bar = tqdm(total=file_size, unit='B', unit_scale=True, desc='Downloading app',dynamic_ncols=True, leave=True)
+            for chunk in response.iter_content(chunk_size=1024):
                 if chunk:
-                    file.write(chunk)
-
-        return os.path.realpath(fname)
+                    package_file.write(chunk)
+                    progress_bar.update(len(chunk))
+            progress_bar.close()
+            
+        return f'{name} was downloaded' if response else f'Error while trying to download {url}'
