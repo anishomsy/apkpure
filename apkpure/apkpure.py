@@ -8,6 +8,9 @@ import sys
 import cloudscraper
 
 
+# Utils
+from . import extractors
+
 class ApkPure:
     def __init__(self, headers: dict | None = None) -> None:
         if headers is None:
@@ -42,65 +45,7 @@ class ApkPure:
         # Return the response if the response is successful i.e status_code == 200
         return response if response.status_code == 200 else None
 
-    def extract_info_from_search(self, html_element):
-        def get_basic_info() -> dict:
-            title = html_element.find("p", class_="p1")
-            developer = html_element.find("p", class_="p2")
-            return {
-                "title": title.text.strip() if title else "Unknown",
-                "developer": developer.text.strip() if developer else "Unknown",
-            }
-
-        def get_package_url(html_element) -> dict:
-            package_url = html_element.find("a", class_="first-info")
-
-            if package_url is None:
-                package_url = html_element.find("a", class_="dd")
-
-            return {"package_url": package_url.attrs.get("href", "Unknown")}
-
-        def get_icon() -> dict:
-            icon = html_element.find("img")
-
-            return {"icon": icon.attrs.get("src", "Unknown") if icon else "Unknown"}
-
-        def get_package_data() -> dict:
-            package_data = html_element.attrs
-            
-            if not package_data.get('class', ''):
-                package_data = html_element.find("a", class_="is-download")
-            package_extension = package_data.get("data-dt-apk-type", 'Uknown')
-            package_name = package_data.get("data-dt-app", 'Uknown')
-            package_size = package_data.get("data-dt-filesize", 'Uknown')
-            package_version = package_data.get("data-dt-version", 'Uknown')
-            package_version_code = package_data.get("data-dt-versioncode", 'Uknown')
-
-            return {
-                "package_extension" : package_extension,
-                "package_name" : package_name,
-                "package_size" : package_size,
-                "package_version" : package_version,
-                "package_version_code" : package_version_code
-            }
-
-        def get_download_link() -> dict:
-            if download_link := html_element.find("a", class_="is-download"):
-                return {"download_link": download_link.attrs.get("href", "Unknown")}
-
-            download_link = html_element.find("a", class_="da")
-
-            return {"download_link": download_link.attrs.get("href", "Unknown")}
-
-        basic_info: dict = get_basic_info()
-        package_url: dict = get_package_url(html_element)
-        icon: dict = get_icon()
-        package_data: dict = get_package_data()
-        download_link: dict = get_download_link()
-
-        # Spread all the info into the all_info and then dump it to json
-        all_app_info = basic_info | icon | package_data | download_link | package_url
-
-        return all_app_info
+    
 
     def search_top(self, name: str) -> str | Exception:
         self.check_name(name)
@@ -119,9 +64,9 @@ class ApkPure:
         if package_url is None:
             package_url = first_div.find("a", class_="dd")
 
-        result = self.extract_info_from_search(first_div)
+        result = extractors.extract_info_from_search(first_div)
 
-        return json.dumps(result)
+        return json.dumps(result, indent=4)
 
     def search_all(self, name: str) -> list[dict]:
         self.check_name(name)
@@ -137,32 +82,32 @@ class ApkPure:
         all_results = [self.extract_info_from_search(first_app)]
 
         for app in apps_in_list_of_apps:
-            all_results.append(self.extract_info_from_search(app))
-        return json.dumps(all_results)
+            all_results.append(extractors.extract_info_from_search(app))
+            
+        return json.dumps(all_results, indent=4)
 
     def get_versions(self, name) -> str:
-        s = json.loads(self.search_top(name))
-        url = f"{s["package_url"]}/versions"
-        soup = self.__helper(url)
+        first_app_from_search : dict = json.loads(self.search_top(name))
+        
+        version_url = str(first_app_from_search.get('package_url')) + "/versions"
+        
+        soup = self.__helper(version_url)
+    
+        versions_list : list = soup.find("ul", class_="ver-wrap")
 
-        full = [{"app": s["package_name"]}]
-        ul = soup.find("ul", class_="ver-wrap")
-        lists = ul.find_all("li")
-        lists.pop()
-        for li in lists:
-            dl_btn = li.find("a", class_="ver_download_link").attrs
-            package_version = dl_btn["data-dt-version"]
-            download_link = dl_btn["href"]
-
-            package_versioncode = dl_btn["data-dt-versioncode"]
-
-            new = {
-                "version": package_version,
-                "download_link": download_link,
-                "version_code": package_versioncode,
-            }
-            full.append(new)
-        return json.dumps(full)
+        items : list[BeautifulSoup] = versions_list.find_all("li")
+        items.pop() # Delete the last one item, cause its a bottom link
+        
+        all_versions : list[dict]= []
+        
+        for item in items:
+            data : BeautifulSoup = item.find("a", class_="ver_download_link") # tag a
+            
+            all_versions.append(
+                extractors.extract_info_from_versions(data)
+            )
+            
+        return json.dumps(all_versions, indent=4)
 
     def get_info(self, name: str) -> str:
         url = json.loads(self.search_top(name))["package_url"]
@@ -197,7 +142,7 @@ class ApkPure:
             "package_url": download_link,
             "older_versions": versions,
         }
-        return json.dumps(new)
+        return json.dumps(new, indent=4)
 
     def download(self, name: str, version: str = "") -> str | None:
         base_url = "https://d.apkpure.com/b/APK/"
