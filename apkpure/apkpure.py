@@ -25,14 +25,14 @@ class ApkPure:
             )
 
     def __helper(self, url) -> BeautifulSoup:
-        response = self.get_response(url=url)
+        response = self.__get_response(url=url)
         # Since response could be None check and exit if it is
         if not response:
             # Exit the program with a return code of 1. Return 0 if successful
             sys.exit("Error: Response is None!")
         return BeautifulSoup(response.text, "html.parser")
 
-    def get_response(self, url: str, **kwargs) -> requests.Response | None:
+    def __get_response(self, url: str, **kwargs) -> requests.Response | None:
         response = requests.get(url, self.headers)
 
         if response.status_code == 403:
@@ -223,7 +223,7 @@ class ApkPure:
 
     # TODO Fix this downloader method
     def downloader(self, url: str) -> str:
-        response = self.get_response(
+        response = self.__get_response(
             url=url, stream=True, allow_redirects=True, headers=self.headers
         )
 
