@@ -110,40 +110,38 @@ class ApkPure:
         return json.dumps(all_versions, indent=4)
 
     def get_info(self, name: str) -> str:
-        url = json.loads(self.search_top(name))["package_url"]
-        html_obj = self.__helper(url)
+        
+        first_app_from_search : dict = json.loads(self.search_top(name))
+        # This variable already give us the needed information about the package
+        # So dl_btn = divs.find("a", class_="download_apk_news").attrs is not necessary anymore
 
-        divs = html_obj.find("div", class_="detail_banner")
-        title = divs.find("div", class_="title_link").get_text(strip=True)
-        rating = divs.find("span", class_="rating").get_text(strip=True)
-        date = divs.find("p", class_="date").text.strip()
-        sdk_info = divs.find("p", class_="details_sdk")
-        latest_version = sdk_info.contents[1].get_text(strip=True)
-        developer = sdk_info.contents[3].get_text(strip=True)
-        dl_btn = divs.find("a", class_="download_apk_news").attrs
-        package_name = dl_btn["data-dt-package_name"]
-        package_versioncode = dl_btn["data-dt-version_code"]
-        download_link = dl_btn["href"]
+        info_url =  str(first_app_from_search.get('package_url'))
+        html_obj = self.__helper(info_url)
 
-        # Find the Description
-        description = html_obj.find("div", class_="translate-content").get_text()
+        detail_banner : BeautifulSoup  = html_obj.find("div", class_="detail_banner")
 
-        # Older Versions
-        versions = json.loads(self.get_versions(name))
-        new = {
-            "title": title,
-            "rating": rating,
-            "date": date,
-            "latest_version": latest_version,
-            "description": description,
-            "developer": developer,
-            "package_name": package_name,
-            "package_versioncode": package_versioncode,
-            "package_url": download_link,
-            "older_versions": versions,
-        }
-        return json.dumps(new, indent=4)
+        detail_banner_title = detail_banner.find("h1").get_text(strip=True)
+        detail_banner_developer = detail_banner.find("span", class_="developer").get_text(strip=True)
+        detail_banner_rating_stars = detail_banner.find("span", class_="details_stars icon").get_text(strip=True)
+        detail_banner_reviews = detail_banner.find("a", class_="details_score icon").get_text(strip=True)
+        detail_banner_last_update = detail_banner.find("p", class_="date").get_text(strip=True)
+        detail_banner_version = detail_banner.find("p", class_="details_sdk").find('span').get_text(strip=True)
+        
+        # Get description
+        description = html_obj.find("div", class_="translate-content").get_text(strip=True)
 
+        all_info = {
+            'title': detail_banner_title,
+            'rating': detail_banner_rating_stars,
+            'description': description,
+            'reviews': detail_banner_reviews,
+            'last update': detail_banner_last_update,
+            'latest version': detail_banner_version,
+            'developer': detail_banner_developer,
+            } | first_app_from_search
+        
+        return json.dumps( all_info, indent=4)
+    
     def download(self, name: str, version: str = "") -> str | None:
         base_url = "https://d.apkpure.com/b/APK/"
 
