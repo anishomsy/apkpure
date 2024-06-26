@@ -27,6 +27,7 @@ def extract_info_from_search(html_element):
             
             if not package_data.get('class', ''):
                 package_data = html_element.find("a", class_="is-download")
+                
             package_extension = package_data.get("data-dt-apk-type", 'Uknown')
             package_name = package_data.get("data-dt-app", 'Uknown')
             package_size = package_data.get("data-dt-filesize", 'Uknown')
@@ -87,3 +88,26 @@ def extract_info_from_versions(html_element : BeautifulSoup):
     all_info = package_info | package_update_on
     
     return all_info
+
+def extract_info_from_get_info(html_element : BeautifulSoup) -> dict :
+    detail_banner : BeautifulSoup  = html_element.find("div", class_="detail_banner")
+
+    detail_banner_title = detail_banner.find("h1").get_text(strip=True)
+    detail_banner_developer = detail_banner.find("span", class_="developer").get_text(strip=True)
+    detail_banner_rating_stars = detail_banner.find("span", class_="details_stars icon").get_text(strip=True)
+    detail_banner_reviews = detail_banner.find("a", class_="details_score icon").get_text(strip=True)
+    detail_banner_last_update = detail_banner.find("p", class_="date").get_text(strip=True)
+    detail_banner_version = detail_banner.find("p", class_="details_sdk").find('span').get_text(strip=True)
+    
+    # Get description
+    description = html_element.find("div", class_="translate-content").get_text(strip=True)
+    
+    return {
+            'title': detail_banner_title,
+            'rating': detail_banner_rating_stars,
+            'description': description,
+            'reviews': detail_banner_reviews,
+            'last_update': detail_banner_last_update,
+            'latest_version': detail_banner_version,
+            'developer': detail_banner_developer,
+        }

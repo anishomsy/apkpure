@@ -1,12 +1,9 @@
 import json
-import os
 import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
-import re
 import sys
 import cloudscraper
-import wget
 
 
 # Utils
@@ -111,55 +108,43 @@ class ApkPure:
         return json.dumps(all_versions, indent=4)
 
     def get_info(self, name: str) -> dict:
-        
-        first_app_from_search : dict = json.loads(self.search_top(name))
+        top_app = self.search_top(name)
+        first_app_from_search : dict = json.loads(top_app)
         # This variable already give us the needed information about the package
         # So dl_btn = divs.find("a", class_="download_apk_news").attrs is not necessary anymore
 
         info_url =  str(first_app_from_search.get('package_url'))
         html_obj = self.__helper(info_url)
 
-        detail_banner : BeautifulSoup  = html_obj.find("div", class_="detail_banner")
-
-        detail_banner_title = detail_banner.find("h1").get_text(strip=True)
-        detail_banner_developer = detail_banner.find("span", class_="developer").get_text(strip=True)
-        detail_banner_rating_stars = detail_banner.find("span", class_="details_stars icon").get_text(strip=True)
-        detail_banner_reviews = detail_banner.find("a", class_="details_score icon").get_text(strip=True)
-        detail_banner_last_update = detail_banner.find("p", class_="date").get_text(strip=True)
-        detail_banner_version = detail_banner.find("p", class_="details_sdk").find('span').get_text(strip=True)
+        return json.dumps(extractors.extract_info_from_get_info(html_obj) | first_app_from_search, indent=4)
         
-        # Get description
-        description = html_obj.find("div", class_="translate-content").get_text(strip=True)
-
-        all_info = {
-            'title': detail_banner_title,
-            'rating': detail_banner_rating_stars,
-            'description': description,
-            'reviews': detail_banner_reviews,
-            'last_update': detail_banner_last_update,
-            'latest_version': detail_banner_version,
-            'developer': detail_banner_developer,
-            } | first_app_from_search
-        
-        return json.dumps( all_info, indent=4)
     
     def download(self, name: str, version: str = None) -> str | None:
-        if not version:
-            package_info : dict = json.loads(self.get_info(name))
-            base_url = 'https://d.apkpure.com/b/XAPK/' \
+        version_code = None
+        if version:
+            versions = json.loads(self.get_versions(name))
+            for version_ in versions:
+                if str(version_.get('version')) == version:
+                    version_code = version_.get("version_code")
+                    break
+        
+        version_code = version_code or package_info.get('package_version_code')
+        
+        package_info : dict = json.loads(self.get_info(name))
+        base_url = 'https://d.apkpure.com/b/APK/' \
                 + package_info.get('package_name') \
                 + '?versionCode=' \
-                + package_info.get('package_version_code')
-            
-            return self.__downloader(base_url)
+                + version_code
 
-    def __downloader(self, url: str) -> str:
+        return self.__downloader(base_url, name, version_code=version_code)
+
+    def __downloader(self, url: str, name : str = None, version_code : str = None) -> str | None:
         response = self.__get_response(url=url, stream=True)
         file_size = int(response.headers.get('Content-Length', 0))
         
-        name = response.headers.get('Content-Disposition').split('filename=')[1].replace('"', '')
-        with open(f'{name}', 'wb') as package_file:
-            progress_bar = tqdm(total=file_size, unit='B', unit_scale=True, desc='Downloading app',dynamic_ncols=True, leave=True)
+        filename = response.headers.get('Content-Disposition').split('filename=')[1].replace('"', '')
+        with open(f'{version_code}_{filename}', 'wb') as package_file:
+            progress_bar = tqdm(total=file_size, unit='B', unit_scale=True, desc=f'Downloading {name}',dynamic_ncols=True, leave=True)
             for chunk in response.iter_content(chunk_size=1024):
                 if chunk:
                     package_file.write(chunk)
