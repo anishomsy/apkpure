@@ -10,15 +10,10 @@ import cloudscraper
 from . import extractors
 
 class ApkPure:
-    def __init__(self, headers: dict | None = None) -> None:
-        if headers is None:
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0"
-            }
-        self.headers = headers
+    def __init__(self) -> None:
         self.query_url = "https://apkpure.com/search?q="
 
-    def check_name(self, name):
+    def __check_name(self, name):
         name = name.strip()
         if not name:
             sys.exit(
@@ -46,7 +41,7 @@ class ApkPure:
     
 
     def search_top(self, name: str) -> str | Exception:
-        self.check_name(name)
+        self.__check_name(name)
 
         query_url = self.query_url + name
         soup_obj = self.__soup_factory(query_url)
@@ -67,7 +62,7 @@ class ApkPure:
         return json.dumps(result, indent=4)
 
     def search_all(self, name: str) -> list[dict]:
-        self.check_name(name)
+        self.__check_name(name)
 
         url = self.query_url + name
         soup = self.__soup_factory(url)
@@ -85,6 +80,7 @@ class ApkPure:
         return json.dumps(all_results, indent=4)
 
     def get_versions(self, name) -> str:
+        self.__check_name(name)
         first_app_from_search : dict = json.loads(self.search_top(name))
         
         version_url = str(first_app_from_search.get('package_url')) + "/versions"
@@ -108,6 +104,7 @@ class ApkPure:
         return json.dumps(all_versions, indent=4)
 
     def get_info(self, name: str) -> dict:
+        self.__check_name(name)
         top_app = self.search_top(name)
         first_app_from_search : dict = json.loads(top_app)
         # This variable already give us the needed information about the package
@@ -121,6 +118,7 @@ class ApkPure:
         
     
     def download(self, name: str, version: str = None, XAPK: bool = False) -> str | None:
+        self.__check_name(name)
         
         app_type = 'XAPK' if XAPK else 'APK'
         
@@ -140,7 +138,7 @@ class ApkPure:
                 + '?versionCode=' \
                 + version_code
 
-        return self.__downloader(base_url, name, version_code=version_code)
+        return self.__downloader(url=base_url, name=name, version_code=version_code)
 
     def __downloader(self, url: str, name : str = None, version_code : str = None) -> str | None:
         response = self.__get_response(url=url, stream=True)
