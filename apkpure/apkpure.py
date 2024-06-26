@@ -119,7 +119,10 @@ class ApkPure:
         return json.dumps(extractors.extract_info_from_get_info(html_obj) | first_app_from_search, indent=4)
         
     
-    def download(self, name: str, version: str = None) -> str | None:
+    def download(self, name: str, version: str = None, XAPK: bool = False) -> str | None:
+        
+        app_type = 'XAPK' if XAPK else 'APK'
+        
         version_code = None
         if version:
             versions = json.loads(self.get_versions(name))
@@ -131,7 +134,7 @@ class ApkPure:
         version_code = version_code or package_info.get('package_version_code')
         
         package_info : dict = json.loads(self.get_info(name))
-        base_url = 'https://d.apkpure.com/b/APK/' \
+        base_url = f'https://d.apkpure.com/b/{app_type}/' \
                 + package_info.get('package_name') \
                 + '?versionCode=' \
                 + version_code
