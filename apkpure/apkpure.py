@@ -25,7 +25,7 @@ class ApkPure:
                 "No search query provided!",
             )
 
-    def __helper(self, url) -> BeautifulSoup:
+    def __soup_factory(self, url) -> BeautifulSoup:
         response = self.__get_response(url=url)
         # Since response could be None check and exit if it is
         if not response:
@@ -49,7 +49,7 @@ class ApkPure:
         self.check_name(name)
 
         query_url = self.query_url + name
-        soup_obj = self.__helper(query_url)
+        soup_obj = self.__soup_factory(query_url)
 
         # The div element
         first_div: BeautifulSoup = soup_obj.find("div", class_="first")
@@ -70,7 +70,7 @@ class ApkPure:
         self.check_name(name)
 
         url = self.query_url + name
-        soup = self.__helper(url)
+        soup = self.__soup_factory(url)
 
         first_app = soup.find("div", class_="first")
 
@@ -89,7 +89,7 @@ class ApkPure:
         
         version_url = str(first_app_from_search.get('package_url')) + "/versions"
         
-        soup = self.__helper(version_url)
+        soup = self.__soup_factory(version_url)
     
         versions_list : list = soup.find("ul", class_="ver-wrap")
 
@@ -115,7 +115,7 @@ class ApkPure:
 
         # The download page has more information about the package
         info_url =  str(first_app_from_search.get('package_url')) + '/download'
-        html_obj = self.__helper(info_url)
+        html_obj = self.__soup_factory(info_url)
 
         return json.dumps(extractors.extract_info_from_get_info(html_obj) | first_app_from_search, indent=4)
         
