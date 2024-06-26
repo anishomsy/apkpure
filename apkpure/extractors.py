@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-
+import html
 def extract_info_from_search(html_element):
         def get_basic_info() -> dict:
             title = html_element.find("p", class_="p1")
@@ -90,24 +90,41 @@ def extract_info_from_versions(html_element : BeautifulSoup):
     return all_info
 
 def extract_info_from_get_info(html_element : BeautifulSoup) -> dict :
-    detail_banner : BeautifulSoup  = html_element.find("div", class_="detail_banner")
+    head_banner : BeautifulSoup  = html_element.find("div", class_="info-content")
 
-    detail_banner_title = detail_banner.find("h1").get_text(strip=True)
-    detail_banner_developer = detail_banner.find("span", class_="developer").get_text(strip=True)
-    detail_banner_rating_stars = detail_banner.find("span", class_="details_stars icon").get_text(strip=True)
-    detail_banner_reviews = detail_banner.find("a", class_="details_score icon").get_text(strip=True)
-    detail_banner_last_update = detail_banner.find("p", class_="date").get_text(strip=True)
-    detail_banner_version = detail_banner.find("p", class_="details_sdk").find('span').get_text(strip=True)
+    # <h1 class="info-title">Example</h1>
+    title = head_banner.find("h1", class_="info-title").get_text(strip=True)
     
-    # Get description
-    description = html_element.find("div", class_="translate-content").get_text(strip=True)
+    
+    # Lastest version need one more step also as the developer info
+    """
+    <span class="info-sdk"> 
+        <span>3.6.2.18580071</span>
+        by Activision Publishing, Inc.
+    </span>
+    """
+    developer = head_banner.find("span", class_="info-sdk").contents[-1].replace("by ", '').strip()
+    
+    version = head_banner.find('span', class_=("info-sdk")).span.get_text(strip=True)
+    
+    
+    rating_stars = head_banner.find("span", class_="stars").get_text(strip=True)
+    
+    # text = &#x202A;4M+, use html unscape to convert to unicode
+    download_count = head_banner.find("span", class_="download-count").get_text().removeprefix('\u202a')
+    
+    last_update = head_banner.find("span", class_="date").get_text(strip=True)
+    
+    file_extension = head_banner.find("a", class_="info-tag").get_text(strip=True)
+    
+    
     
     return {
-            'title': detail_banner_title,
-            'rating': detail_banner_rating_stars,
-            'description': description,
-            'reviews': detail_banner_reviews,
-            'last_update': detail_banner_last_update,
-            'latest_version': detail_banner_version,
-            'developer': detail_banner_developer,
+            'title': title,
+            'developer': developer,
+            'rating': rating_stars,
+            'download_count': download_count,
+            'last_update': last_update,
+            'latest_version': version,
+            "file_extension": file_extension,
         }
