@@ -16,21 +16,14 @@ An API for interacting with the APK Pure website, allowing you to search for app
 - `requests` library
 - `beautifulsoup4` library
 - `tqdm` library
+- `cloudscraper` library
 
 ### Installation
 
-First Method:
-
-```sh
-pip install apkpure
-```
-
-<details>
-  <summary>Second Method:</summary>
 1. Clone the repository:
 
 ```sh
-git clone https://github.com/anishomsy/apkpure.git
+git clone https://github.com/thawancomt/apkpureAPI.git
 cd apkpure
 ```
 
@@ -57,12 +50,6 @@ cd apkpure
 4. Install the required libraries:
 
    ```sh
-   pip install requests beautifulsoup4 tqdm
-   ```
-
-   or
-
-   ```sh
    pip install -r requirements.txt
    ```
 
@@ -78,23 +65,23 @@ from apkpure.apkpure import ApkPure
 # Initialize the API
 api = ApkPure()
 
-# Search for an app and get top result
+# Search for an app and get the first one result
 top_result = api.search_top("WhatsApp")
 print(top_result)
 
-# Search for all results
+# Search for all results for a query
 all_results = api.search_all("WhatsApp")
 print(all_results)
 
-# Get app versions
+# Get app versions, Note: the versions is from the first one result from the search_top method
 versions = api.get_versions("WhatsApp")
 print(versions)
 
-# Get app info
+# Get app info, Note: the info is from the first one result from the search_top method
 app_info = api.get_info("WhatsApp")
 print(app_info)
 
-# Download the latest version of an app
+# Download the latest version of an app, Note: the latest version is from the first one result from the search_top method
 download_path = api.download("whatsapp")
 print(download_path)
 
