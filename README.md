@@ -96,11 +96,7 @@ A class to interact with ApkPure for searching apps, retrieving app information,
 <details>
   <summary><code>__init__(headers: dict | None = None) -> None</code></summary>
   
-  Initialize the `ApkPure` instance with optional headers.
-
-- **Parameters**:
-  - `headers` (dict | None): Optional headers for HTTP requests.
-
+  Initialize the `ApkPure`
 </details>
 
 <details>

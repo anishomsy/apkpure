@@ -29,7 +29,7 @@ class ApkPure:
         return BeautifulSoup(response.text, "html.parser")
 
     def __get_response(self, url: str, **kwargs) -> requests.Response | None:
-        response = requests.get(url, self.headers)
+        response = requests.get(url)
 
         if response.status_code == 403:
             scraper = cloudscraper.create_scraper()
@@ -122,6 +122,8 @@ class ApkPure:
         
         app_type = 'XAPK' if XAPK else 'APK'
         
+        package_info : dict = json.loads(self.get_info(name))
+        
         version_code = None
         if version:
             versions = json.loads(self.get_versions(name))
@@ -132,7 +134,6 @@ class ApkPure:
         
         version_code = version_code or package_info.get('package_version_code')
         
-        package_info : dict = json.loads(self.get_info(name))
         base_url = f'https://d.apkpure.com/b/{app_type}/' \
                 + package_info.get('package_name') \
                 + '?versionCode=' \
