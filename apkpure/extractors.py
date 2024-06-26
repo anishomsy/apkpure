@@ -28,7 +28,7 @@ def extract_info_from_search(html_element):
             if not package_data.get('class', ''):
                 package_data = html_element.find("a", class_="is-download")
                 
-            package_extension = package_data.get("data-dt-apk-type", 'Uknown')
+            package_extension = package_data.get("data-dt-apk-type", 'Uknown or Just for Search All')
             package_name = package_data.get("data-dt-app", 'Uknown')
             package_size = package_data.get("data-dt-filesize", 'Uknown')
             package_version = package_data.get("data-dt-version", 'Uknown')

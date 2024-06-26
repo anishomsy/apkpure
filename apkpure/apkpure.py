@@ -113,6 +113,8 @@ class ApkPure:
         # This variable already give us the needed information about the package
         # So dl_btn = divs.find("a", class_="download_apk_news").attrs is not necessary anymore
 
+        # The download page has more information about the package
+        info_url =  str(first_app_from_search.get('package_url')) + '/download'
         html_obj = self.__helper(info_url)
 
         return json.dumps(extractors.extract_info_from_get_info(html_obj) | first_app_from_search, indent=4)
